@@ -63,13 +63,50 @@ public class LeerArchivo {
     }
     
     
-    
+    public static boolean tokenIsValido(String tokenEvaluar){
+        boolean valido = false;
+        
+        if (tokenEvaluar.charAt(0) == 34) {//34 es el numero de las comillas
+            //si tiene comillas de inicio y cierre todo lo que tenga adentro es valido
+            if (tokenEvaluar.charAt(tokenEvaluar.length() - 1) == 34) {//nos vamos a la ultima pos del token
+                valido = true;
+
+            } 
+            return valido;
+        }
+
+        for (int i = 0; i < simbolosValidos.size(); i++) {
+
+            if (tokenEvaluar.equals(simbolosValidos.get(i))) {
+                valido = true;
+                return valido;
+            }
+        }
+
+        int contadorPuntitos = 0;
+        //aqui vamos a recorrer la palabara para verificar que sea una letra o numero
+        for (int i = 0; i < tokenEvaluar.length(); i++) {
+            valido = true;
+            if (tokenEvaluar.charAt(i) == '.') {
+                contadorPuntitos++;
+                if (contadorPuntitos > 1) {
+                    valido = false;
+                }
+            }
+            char letraEvaluando = tokenEvaluar.charAt(i);
+            if (!(letraEvaluando == '_' || letraEvaluando == '.' || (((int) letraEvaluando >= 65) && ((int) letraEvaluando <= 122)) || (((int) letraEvaluando >= 48) && ((int) letraEvaluando <= 57)))) {
+                valido = false;
+            }
+
+        }
+
+        return valido;
+    }
 
     public static String generarToken(LeerArchivo archivo) throws IOException {
         // ( _ )? ( [A-Z]|[a-z])+ ( _ |.)? ([0-9])*
         // [0-9]+ (.[0-9]+)?
         char caracterPerdido = 0;
-       
 
         char letraEvaluando;
         String token = "";
@@ -83,14 +120,20 @@ public class LeerArchivo {
             String expresion = "";
 
             while (letraSiguiente != 34 && letraEvaluando != 65535) {
+                
+                //System.out.println("Evaluando --> "+letraEvaluando+" Siguiente--> "+(int)letraSiguiente);
+                if(letraEvaluando == ')' && letraSiguiente == 13 ){//si estamos cerrando show
+                archivo.setnLlamadas(archivo.getnLlamadas() - 2);//aqui apuntamos a la ultima letra de nuestro token
+                return expresion;
+                }
 
                 expresion += (char) letraEvaluando;
                 letraEvaluando = letraSiguiente;
                 letraSiguiente = archivo.leerCaracter();
-                if (letraEvaluando == 65535 || letraEvaluando == ')') {
+               /* if (letraEvaluando == 65535 || letraEvaluando == ')') {
                     archivo.setnLlamadas(archivo.getnLlamadas() - 2);//aqui apuntamos a la ultima letra de nuestro token
                     return expresion;
-                }
+                }*/
             }
             if (letraSiguiente == 34) {
                 expresion = expresion + letraEvaluando + (char) letraSiguiente;
@@ -238,7 +281,11 @@ public class LeerArchivo {
 
         for (int i = 0; i < 100; i++) {
             String recibido = generarToken(archivo1);
+            
+            if(tokenIsValido(recibido))
             System.out.println("Recibio el token completo--> " + recibido);
+            else
+               System.out.println("token invalido--> "+recibido); 
 
         }
 
