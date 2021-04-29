@@ -500,7 +500,7 @@ public class LeerArchivo {
         String tokenActual = tokensVarNum.get(contadorTOKENS);
         contadorTOKENS++; //apuntamos al token que sigue de <DATO> por lo que ya no es necesario en el if
         if ("caracter".equals(tokenActual) || "string".equals(tokenActual) || "integer".equals(tokenActual) || "decimal".equals(tokenActual) || "double".equals(tokenActual)) {
-            tokenActual = tokensVarNum.get(contadorTOKENS);
+            
         } else {
             funcionError(1, "Tipo de dato invalido--> ", tokenActual);
         }
