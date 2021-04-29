@@ -436,24 +436,33 @@ public class LeerArchivo {
 //<AUX1>::=  = <AUXnumID>
 //FIRST(AUX1) = { “=”+ “ε“}
 //FOLLOW(AUX1) = {  “;” }
-        
-        
-        
-
-
         String tokenActual = "";
         tokenActual = tokensVarNum.get(contadorTOKENS);//se supone que al entrar, el contadorTOKENS ya apunta %   
         contadorTOKENS++; //para apuntar al dato que esta despues del %
 
         if ("%".equals(tokenActual)) {
-            dato();
-            
+            dato(); //al salir de dato, estamos apuntando ya a <IDENT>
+            tokenActual = tokensVarNum.get(contadorTOKENS);//aqui el token actual es IDENT 
+            contadorTOKENS++; //para apuntar al token que esta despues de IDENT, en este caso AUX1
+
+            if ("IDENT".equals(tokenActual)) {
+                aux1();//se supone que al salir de aux1, ya estamos apuntando al ;
+                tokenActual = tokensVarNum.get(contadorTOKENS);//aqui el token actual es IDENT 
+                contadorTOKENS++; //para apuntar al token que esta despues de ;
+
+                if (";".equals(tokenActual)) {
+                    auxEncabezado();
+                } else {
+                    funcionError(1, ";", tokenActual);
+                }
+
+            } else {
+                funcionError(1, "IDENT", tokenActual);
+            }
+
         } else {
             funcionError(0, "%", tokenActual);
         }
-
-        
-
 
     }
 
@@ -495,6 +504,17 @@ public class LeerArchivo {
         } else {
             funcionError(1, "Tipo de dato invalido--> ", tokenActual);
         }
+    }
+    
+    
+    public void aux1() {
+//<AUX1> ::= ε
+//<AUX1>::=  = <AUXnumID>
+//FIRST(AUX1) = { “=”+ “ε“}
+//FOLLOW(AUX1) = {  “;” }
+
+        auxNumID();
+
     }
 
     
