@@ -20,7 +20,10 @@ public class LeerArchivo {
 
     String direccion = "";
     int nLlamadas = 1;
+    int contadorTOKENS = 0;
     public static ArrayList<String> simbolosValidos = new  ArrayList<>();
+    public static ArrayList<String> tokens = new  ArrayList<>();
+    public static ArrayList<String> tokensVarNum = new  ArrayList<>();
     
     public LeerArchivo() {
         simbolosValidos.add("#");
@@ -60,6 +63,9 @@ public class LeerArchivo {
         simbolosValidos.add("AND");
         simbolosValidos.add("or");
         simbolosValidos.add("OR");
+        simbolosValidos.add("main");
+        simbolosValidos.add("return");
+        
     }
     
     
@@ -258,6 +264,90 @@ public class LeerArchivo {
 
     }
 
+    public static void guardarTOKENS(LeerArchivo archivo1) throws IOException {
+        for (int i = 0; i < 100; i++) { //falta cambiar por while
+            String recibido = generarToken(archivo1);
+
+            if (tokenIsValido(recibido)) {
+                System.out.println("Recibio el token completo--> " + recibido);//+" ASCII: "+(int)recibido.charAt(0)
+                
+            } else {
+                System.out.println("token invalido--> " + recibido);
+            }
+            
+            
+            tokens.add(recibido);
+            if (65535 == recibido.charAt(0)) {
+                tokens.remove(i);
+                break;
+
+            }
+
+        }
+    }
+
+    public static void varNum() {
+        for (String s : tokens) {
+
+            if ((int) s.charAt(0) >= 48 && (int) s.charAt(0) <= 57) {
+
+                s = "NUMERO";
+
+            } else {
+
+                s = revisarSiEsSimbolo(s);
+            }
+
+            tokensVarNum.add(s);
+        }
+
+        System.out.println("*****************************");
+        for (int i = 0; i < tokensVarNum.size(); i++) {
+            if (tokenIsValido(tokens.get(i))) {
+                System.out.println("VALIDO--> "+tokens.get(i) + " >>> " + tokensVarNum.get(i));
+            } else {
+                System.out.println("NO valido--> "+tokens.get(i) + " >>> " + tokensVarNum.get(i));
+            }
+        }
+    }
+
+    public static String revisarSiEsSimbolo(String tokenEvaluar) {
+        boolean isSimbolo = false;
+        
+        for (int i = 0; i < simbolosValidos.size(); i++) {
+
+            if (tokenEvaluar.equals(simbolosValidos.get(i))) {
+               isSimbolo = true;
+            } 
+        }
+        
+        if(!isSimbolo && tokenIsValido(tokenEvaluar)){
+            tokenEvaluar = "IDENT";
+        }
+
+        return tokenEvaluar;
+    }
+    
+    
+    
+    public void programa(){ // <Programa>::= Main <Ecabezado> FinishMain
+        //if()
+    
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
     public String getDireccion() {
         return direccion;
     }
@@ -278,17 +368,18 @@ public class LeerArchivo {
 
         LeerArchivo archivo1 = new LeerArchivo();
         archivo1.abrirArchivo();
-
-        for (int i = 0; i < 100; i++) {
-            String recibido = generarToken(archivo1);
-            
-            if(tokenIsValido(recibido))
-            System.out.println("Recibio el token completo--> " + recibido);
-            else
-               System.out.println("token invalido--> "+recibido); 
-
-        }
+        guardarTOKENS(archivo1);
+        varNum();
+        
 
     }
+    
+    
+    
+    
+    
+    
+    
+    
 
 }
