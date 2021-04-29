@@ -345,15 +345,20 @@ public class LeerArchivo {
         tokenActual = tokensVarNum.get(contadorTOKENS);//token 0        
         contadorTOKENS++;
 
-        if (!"Main".equals(tokenActual)) {
+        if ("Main".equals(tokenActual)) { //aqui el contador de tokens, debe estar apuntando a lo que sigue de MAIN
+            encabezado();//al salir de la funcion se supone que ya debemos apuntar a FinishMain con el contadorTOKENS, por lo tanto solo lo asignamos 
+            tokenActual = tokensVarNum.get(contadorTOKENS);
+            //aqui no es necesario apuntarlo a otro token pq se supone que ya termina
+            if ("FinishMain".equals(tokenActual)) {
+                System.out.println("---------- PROGRAMA SIN ERRORES DE SINTAXIS ----------");
+            }else{
+                funcionError(1, "FinishMain");
+            }
+
+        } else {
             funcionError(1, "Main");
         }
 
-        encabezado();
-
-        if (!"FinishMain".equals(tokenActual)) {
-            funcionError(1, "FinishMain");
-        }
     }
 
     public void encabezado() { // <AUXencabezado> <INSTRUCCION>
@@ -425,6 +430,31 @@ public class LeerArchivo {
 
     public void auxVariable() {
 
+//<AUXvariable>  ::= % <DATO> <IDENT> <AUX1> ; <AUXencabezado>
+//FIRST(AUXvariable) = {“%”}
+//<AUX1> ::= ε
+//<AUX1>::=  = <AUXnumID>
+//FIRST(AUX1) = { “=”+ “ε“}
+//FOLLOW(AUX1) = {  “;” }
+        
+        
+        
+
+
+        String tokenActual = "";
+        tokenActual = tokensVarNum.get(contadorTOKENS);//se supone que al entrar, el contadorTOKENS ya apunta %   
+        contadorTOKENS++; //para apuntar al dato que esta despues del %
+
+        if ("%".equals(tokenActual)) {
+            dato();
+            
+        } else {
+            funcionError(0, "%", tokenActual);
+        }
+
+        
+
+
     }
 
     public void auxProceso() {
@@ -438,17 +468,32 @@ public class LeerArchivo {
 
         //Como aqui ya se esta apuntando al token, se rescata el token y despues se suma
         String tokenActual = tokensVarNum.get(contadorTOKENS);
-        contadorTOKENS++;
+        contadorTOKENS++; //apuntamos al token que sigue de IDENT o de NUMERO, por ello no es necesario ponerlo en los if
         if ("IDENT".equals(tokenActual)) {
             tokenActual = tokensVarNum.get(contadorTOKENS);
-            contadorTOKENS++; //apuntamos al token que sigue de IDENT
-
         } else if ("NUMERO".equals(tokenActual)) {
             tokenActual = tokensVarNum.get(contadorTOKENS);
-            contadorTOKENS++; //apuntamos al token que sigue de NUMERO
         } else {
 
             funcionError(4, tokenActual);
+        }
+    }
+
+    public void dato() {
+//<DATO>::= caracter
+//<DATO>::= string
+//<DATO>::= integer
+//<DATO>::= decimal
+//<DATO>::= double
+//FIRST(DATO) = { “caracter” + “string” + “integer” + “decimal”+ “double”}
+
+        //Como aqui ya se esta apuntando al token, se rescata el token y despues se suma
+        String tokenActual = tokensVarNum.get(contadorTOKENS);
+        contadorTOKENS++; //apuntamos al token que sigue de <DATO> por lo que ya no es necesario en el if
+        if ("caracter".equals(tokenActual) || "string".equals(tokenActual) || "integer".equals(tokenActual) || "decimal".equals(tokenActual) || "double".equals(tokenActual)) {
+            tokenActual = tokensVarNum.get(contadorTOKENS);
+        } else {
+            funcionError(1, "Tipo de dato invalido--> ", tokenActual);
         }
     }
 
@@ -501,7 +546,6 @@ public class LeerArchivo {
     }
     
     
-    
     public void funcionError(int errorN, String esperado, String recibido) {
 
         switch (errorN) {
@@ -510,7 +554,7 @@ public class LeerArchivo {
                 System.out.println("Error de sintaxis se esperaba--> " + esperado + " y se recibio --> " + recibido);
                 break;
             case 1:
-                
+                System.out.println("Error: " + esperado + recibido);
                 break;
 
             default:
