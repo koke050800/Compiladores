@@ -63,7 +63,7 @@ public class LeerArchivo {
         simbolosValidos.add("AND");
         simbolosValidos.add("or");
         simbolosValidos.add("OR");
-        simbolosValidos.add("main");
+        simbolosValidos.add("Main");
         simbolosValidos.add("return");
         
     }
@@ -294,7 +294,7 @@ public class LeerArchivo {
     public static void varNum() {
         for (String s : tokens) {
 
-            if ((int) s.charAt(0) >= 48 && (int) s.charAt(0) <= 57) {
+            if ((int) s.charAt(0) >= 48 && (int) s.charAt(0) <= 57 || ( (int) s.charAt(0) == 46 && s.length()>= 2 && (int) s.charAt(1) >= 48 && (int) s.charAt(1) <= 57) ) {
 
                 s = "NUMERO";
 
@@ -334,10 +334,190 @@ public class LeerArchivo {
     }
     
     
+    // ArrayList<String> tokens  -----------------------------> Lista con TOKENS otiginal 
+    // ArrayList<String> tokensVarNum = new  ArrayList<>(); --> Lista con tokens que dicen IDENT y NUMERO
     
-    public void programa(){ // <Programa>::= Main <Ecabezado> FinishMain
-        //if()
+    public void programa() { // <Programa>::= Main <Ecabezado> FinishMain 
+//        
+//        FIRST(Programa) = {“Main”}
+        
+        String tokenActual = "";
+        tokenActual = tokensVarNum.get(contadorTOKENS);//token 0        
+        contadorTOKENS++;
+
+        if (!"Main".equals(tokenActual)) {
+            funcionError(1, "Main");
+        }
+
+        encabezado();
+
+        if (!"FinishMain".equals(tokenActual)) {
+            funcionError(1, "FinishMain");
+        }
+    }
+
+    public void encabezado() { // <AUXencabezado> <INSTRUCCION>
+        
+// FIRST(Encabezado) = FIRST(AUXencabezado) = { FIRST(AUXnumero) + FIRST(AUXvariable) + FIRST(AUXproceso) +  “ε “ } 
+// = { “#” + “%”  + “process” + “ε “  } = { “#” + “%”  + “process”  +  FIRST(INSTRUCCION)  } 
+// = { “#” + “%”  + “process”  +    “ifThen”+ “whileThen” + “execute” + “IDENT”}
+
+        auxEncabezado();
+        instruccion();
+
+    }
+
+    public void auxEncabezado() {
+// <AUXencabezado> ::= <AUXnumero>
+// <AUXencabezado> ::= <AUXvariable>  
+// <AUXencabezado> ::= <AUXproceso>  
+// <AUXencabezado> ::= ε
+
+//FIRST(AUXencabezado) = { FIRST(AUXnumero) + FIRST(AUXvariable) + FIRST(AUXproceso) +  “ε“ } 
+//FOLLOW(AUXencabezado) = { FIRST(INSTRUCCION) }  = 
+//{ “ifThen”+ “whileThen” + “execute” + “IDENT” + FOLLOW(AUXnumero) + FOLLOW(AUXvariable)  } = 
+//{ “ifThen”+ “whileThen” + “execute” + “IDENT”}
+        
+        //se supone que aqui voy a estar en el token 1, la primera vez
+        auxNumero();
+        auxVariable();
+        auxProceso();  
+
+    }
+
+    public void auxNumero() {
+// <AUXnumero> ::= # <IDENT> := <AUXnumID> ; <AUXencabezado>
+// FIRST(AUXnumero) = {“#”}
+        String tokenActual = "";
+        tokenActual = tokensVarNum.get(contadorTOKENS);//token 1 la primera vez, ya pasamos el token 0       
+        contadorTOKENS++;
+
+        if ("#".equals(tokenActual)) {
+            tokenActual = tokensVarNum.get(contadorTOKENS);
+            contadorTOKENS++;
+            if ("IDENT".equals(tokenActual)) {
+                tokenActual = tokensVarNum.get(contadorTOKENS);
+                contadorTOKENS++;
+                if (":=".equals(tokenActual)) { //OJOOOOOO >>>>>> contador token estaria en lo que sigue de :=                    
+                    auxNumID();
+
+                    //al salir de la funcion, se supone que ya estamos apuntando al ; de nustra regla 
+                    tokenActual = tokensVarNum.get(contadorTOKENS);
+                    contadorTOKENS++; //se supone que aqui ya apuntamos al token que le sigue al ;
+                    //entonces no es necesario hacerlo en el if
+
+                    if (";".equals(tokenActual)) {
+                        auxEncabezado();
+                    } else {
+                        funcionError(0, "#", tokenActual);
+                    }
+                } else {
+                    funcionError(3, tokenActual);
+                }
+            } else {
+                funcionError(2, tokenActual);
+            }
+
+        } else {
+            funcionError(0, "#", tokenActual);
+        }
+    }
+
+    public void auxVariable() {
+
+    }
+
+    public void auxProceso() {
+
+    }
+
+    public void auxNumID() {
+//<AUXnumID> ::= <NUMERO>
+//<AUXnumID> ::= <IDENT>
+//FIRST(AUXnumID) = {“IDENT” + “NUMERO”}
+
+        //Como aqui ya se esta apuntando al token, se rescata el token y despues se suma
+        String tokenActual = tokensVarNum.get(contadorTOKENS);
+        contadorTOKENS++;
+        if ("IDENT".equals(tokenActual)) {
+            tokenActual = tokensVarNum.get(contadorTOKENS);
+            contadorTOKENS++; //apuntamos al token que sigue de IDENT
+
+        } else if ("NUMERO".equals(tokenActual)) {
+            tokenActual = tokensVarNum.get(contadorTOKENS);
+            contadorTOKENS++; //apuntamos al token que sigue de NUMERO
+        } else {
+
+            funcionError(4, tokenActual);
+        }
+    }
+
     
+
+    public void instruccion() {
+
+    }
+    
+    
+    
+    //AUN NO SE SI ES NECESARIO EL CASE, o si con 3 parametros abarcamos todos los errores de sitaxis
+    // en el metodo sobrecargado
+    
+    public void funcionError(int errorN, String esperado) {
+
+        switch (errorN) {
+
+            case 0:
+                break;
+            case 1:
+                System.out.println("Error de sintaxis se esperaba--> " + esperado);
+                break;
+            case 2:
+                System.out.println("Error de sintaxis se esperaba IDENT y envio " + esperado);
+                break;
+
+            case 3:
+                System.out.println("Error de sintaxis se esperaba := y envio " + esperado);
+                break;
+            case 4:
+                System.out.println("Error de sintaxis se esperaba IDENT o un NUMERO y envio " + esperado);
+                break;
+            case 5:
+                break;
+            case 6:
+                break;
+            case 7:
+                break;
+            case 8:
+                break;
+            case 9:
+                break;
+
+            default:
+                break;
+
+        }
+
+    }
+    
+    
+    
+    public void funcionError(int errorN, String esperado, String recibido) {
+
+        switch (errorN) {
+
+            case 0:
+                System.out.println("Error de sintaxis se esperaba--> " + esperado + " y se recibio --> " + recibido);
+                break;
+            case 1:
+                
+                break;
+
+            default:
+                break;
+
+        }
+
     }
     
     
@@ -375,6 +555,7 @@ public class LeerArchivo {
         archivo1.abrirArchivo();
         guardarTOKENS(archivo1);
         varNum();
+        archivo1.programa();
         
 
     }
