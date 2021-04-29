@@ -265,25 +265,30 @@ public class LeerArchivo {
     }
 
     public static void guardarTOKENS(LeerArchivo archivo1) throws IOException {
-        for (int i = 0; i < 100; i++) { //falta cambiar por while
-            String recibido = generarToken(archivo1);
+ 
+        boolean continuar = true;
+        int i = 0;
 
+        while (continuar) {
+            String recibido = generarToken(archivo1);
             if (tokenIsValido(recibido)) {
                 System.out.println("Recibio el token completo--> " + recibido);//+" ASCII: "+(int)recibido.charAt(0)
-                
+
             } else {
                 System.out.println("token invalido--> " + recibido);
             }
-            
-            
+
             tokens.add(recibido);
             if (65535 == recibido.charAt(0)) {
                 tokens.remove(i);
                 break;
 
             }
+            i++;
 
         }
+        
+
     }
 
     public static void varNum() {
