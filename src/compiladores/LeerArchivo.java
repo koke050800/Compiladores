@@ -64,7 +64,11 @@ public class LeerArchivo {
         simbolosValidos.add("or");
         simbolosValidos.add("OR");
         simbolosValidos.add("Main");
-        simbolosValidos.add("return");
+        simbolosValidos.add("endIf");
+        simbolosValidos.add("endWhile");
+        simbolosValidos.add("FinishMain");
+        simbolosValidos.add("elseThen");
+        
         
     }
     
@@ -272,10 +276,10 @@ public class LeerArchivo {
         while (continuar) {
             String recibido = generarToken(archivo1);
             if (tokenIsValido(recibido)) {
-                System.out.println("Recibio el token completo--> " + recibido);//+" ASCII: "+(int)recibido.charAt(0)
+                //System.out.println("Recibio el token completo--> " + recibido);//+" ASCII: "+(int)recibido.charAt(0)
 
             } else {
-                System.out.println("token invalido--> " + recibido);
+                //System.out.println("token invalido--> " + recibido);
             }
 
             tokens.add(recibido);
@@ -340,19 +344,28 @@ public class LeerArchivo {
     public void programa() { // <Programa>::= Main <Ecabezado> FinishMain 
 //        
 //        FIRST(Programa) = {“Main”}
-        
+
         String tokenActual = "";
         tokenActual = tokensVarNum.get(contadorTOKENS);//token 0        
-        contadorTOKENS++;
+        contadorTOKENS++;//aqui apuntamos ya al primer token del encabezado
 
         if ("Main".equals(tokenActual)) { //aqui el contador de tokens, debe estar apuntando a lo que sigue de MAIN
             encabezado();//al salir de la funcion se supone que ya debemos apuntar a FinishMain con el contadorTOKENS, por lo tanto solo lo asignamos 
             tokenActual = tokensVarNum.get(contadorTOKENS);
+            
+            //POR SI PONEMOS UNA INSTRUCCION QUE NO SEA IF ELSE WHILE Y ESO AL FINAL DE LOS PROCESS O INSTRUCCIONES DE ESTE TIPO
+            String tokenAnterior = tokensVarNum.get(contadorTOKENS - 1);
+            if (";".equals(tokenActual) && ("IDENT".equals(tokenAnterior) || "NUMERO".equals(tokenAnterior))) {
+                contadorTOKENS++;
+                tokenActual = tokensVarNum.get(contadorTOKENS);
+            }
+            
+            
             //aqui no es necesario apuntarlo a otro token pq se supone que ya termina
             if ("FinishMain".equals(tokenActual)) {
                 System.out.println("---------- PROGRAMA SIN ERRORES DE SINTAXIS ----------");
-            }else{
-                funcionError(1, "FinishMain");
+            } else {
+                funcionError(1, "Se esperaba FinishMain", " y se recibio " + tokensVarNum.get(contadorTOKENS));
             }
 
         } else {
@@ -362,13 +375,13 @@ public class LeerArchivo {
     }
 
     public void encabezado() { // <AUXencabezado> <INSTRUCCION>
-        
+
 // FIRST(Encabezado) = FIRST(AUXencabezado) = { FIRST(AUXnumero) + FIRST(AUXvariable) + FIRST(AUXproceso) +  “ε “ } 
 // = { “#” + “%”  + “process” + “ε “  } = { “#” + “%”  + “process”  +  FIRST(INSTRUCCION)  } 
 // = { “#” + “%”  + “process”  +    “ifThen”+ “whileThen” + “execute” + “IDENT”}
-
         auxEncabezado();
         instruccion();
+        
 
     }
 
@@ -382,13 +395,26 @@ public class LeerArchivo {
 //FOLLOW(AUXencabezado) = { FIRST(INSTRUCCION) }  = 
 //{ “ifThen”+ “whileThen” + “execute” + “IDENT” + FOLLOW(AUXnumero) + FOLLOW(AUXvariable)  } = 
 //{ “ifThen”+ “whileThen” + “execute” + “IDENT”}
-        
-        //se supone que aqui voy a estar en el token 1, la primera vez
-        auxNumero();
-        auxVariable();
-        auxProceso();  
+        String tokenActual = "";
+        tokenActual = tokensVarNum.get(contadorTOKENS);//ya estamos apuntando al primer token de auxNumero, auxVariable, auxProceso, o al epsilon 
+
+        if (!"ifThen".equals(tokenActual) && !"whileThen".equals(tokenActual)
+                && !"execute".equals(tokenActual) && !"IDENT".equals(tokenActual)) {
+
+            if ("#".equals(tokenActual)) {
+                auxNumero();
+            } else if ("%".equals(tokenActual)) {
+                auxVariable();
+            } else if ("process".equals(tokenActual)) {
+                auxProceso();
+            } else {
+                funcionError(1, "se esperaba '#', '%' o 'process' y envio--> " + tokenActual);
+            }
+
+        }
 
     }
+
 
     public void auxNumero() {
 // <AUXnumero> ::= # <IDENT> := <AUXnumID> ; <AUXencabezado>
@@ -466,7 +492,55 @@ public class LeerArchivo {
 
     }
 
-    public void auxProceso() {
+    public void auxProceso() {//OJOOO, puse FinishMain de follow, para que pueda acabar, despues de un proceso
+
+//<AUXproceso> ::= process <IDENT> { <ENCABEZADO> } <AUXproceso>
+//<AUXproceso>::= ε
+//FIRST(AUXproceso) = { “process” + “ε “ } 
+//FOLLOW(AUXproceso) = {FOLLOW(AUXproceso) + FOLLOW(AUXencabezado) } 
+//                   = { “ifThen”+ “whileThen” + “execute” + “IDENT”}
+        String tokenActual = "";
+        tokenActual = tokensVarNum.get(contadorTOKENS);//se supone que al entrar, el contadorTOKENS ya apunta process o al epsilon
+
+        //aqui no aumentamos el contador, solo si entra al if se aumenta,  para que en caso de que sea un follow, se quede en el token correspondiente al follow
+        if (!"ifThen".equals(tokenActual) && !"whileThen".equals(tokenActual) && !"execute".equals(tokenActual) && !"IDENT".equals(tokenActual) && !"FinishMain".equals(tokenActual)
+                ){
+
+            contadorTOKENS++; //para apuntar al dato que esta despues de process
+
+            if ("process".equals(tokenActual)) {
+
+                tokenActual = tokensVarNum.get(contadorTOKENS);//aqui el token actual es IDENT 
+                contadorTOKENS++; //para apuntar al token que esta despues de IDENT, en este caso (
+
+                if ("IDENT".equals(tokenActual)) {
+
+                    tokenActual = tokensVarNum.get(contadorTOKENS);//aqui el token actual es (
+                    contadorTOKENS++; //para apuntar al token que esta despues de (, en este caso <ENCABEZADO>
+
+                    if ("{".equals(tokenActual)) {
+                        encabezado();//se supone que al salir de encabezado, ya estamos apuntando al )
+                        tokenActual = tokensVarNum.get(contadorTOKENS);//aqui el token actual es )
+                        contadorTOKENS++; //para apuntar al token que esta despues de )
+
+                        if ("}".equals(tokenActual)) {
+                            auxProceso();
+                        } else {
+                            funcionError(0, "}", tokenActual);
+                        }
+
+                    } else {
+                        funcionError(0, "{", tokenActual);
+                    }
+
+                } else {
+                    funcionError(1, "IDENT", tokenActual);
+                }
+
+            } else {
+                funcionError(0, "process", tokenActual);
+            }
+        }//si no entro al if, el token actual es { “ifThen”+ “whileThen” + “execute” + “IDENT”}
 
     }
 
@@ -479,9 +553,9 @@ public class LeerArchivo {
         String tokenActual = tokensVarNum.get(contadorTOKENS);
         contadorTOKENS++; //apuntamos al token que sigue de IDENT o de NUMERO, por ello no es necesario ponerlo en los if
         if ("IDENT".equals(tokenActual)) {
-            tokenActual = tokensVarNum.get(contadorTOKENS);
+
         } else if ("NUMERO".equals(tokenActual)) {
-            tokenActual = tokensVarNum.get(contadorTOKENS);
+
         } else {
 
             funcionError(4, tokenActual);
@@ -500,34 +574,468 @@ public class LeerArchivo {
         String tokenActual = tokensVarNum.get(contadorTOKENS);
         contadorTOKENS++; //apuntamos al token que sigue de <DATO> por lo que ya no es necesario en el if
         if ("caracter".equals(tokenActual) || "string".equals(tokenActual) || "integer".equals(tokenActual) || "decimal".equals(tokenActual) || "double".equals(tokenActual)) {
-            
+
         } else {
-            funcionError(1, "Tipo de dato invalido--> ", tokenActual);
+            funcionError(1, "Tipo de dato invalido, se esperaba caracter, string, integer, decimal, double y se recibio--> ", tokenActual);
         }
     }
-    
-    
+
     public void aux1() {
 //<AUX1> ::= ε
 //<AUX1>::=  = <AUXnumID>
 //FIRST(AUX1) = { “=”+ “ε“}
 //FOLLOW(AUX1) = {  “;” }
 
-        auxNumID();
+        //Como aqui ya se esta apuntando al token que sigue del epsilon o el de AUXnumID, se rescata el token y se compara
+        String tokenActual = tokensVarNum.get(contadorTOKENS);
+
+        if (!";".equals(tokenActual)) {
+            auxNumID();
+        }
 
     }
-
-    
 
     public void instruccion() {
+//<INSTRUCCION>::= <AUXinstrucciones>
+//FIRST(INSTRUCCION) = { FIRST(AUXinstrucciones) } =  { FIRST(AUXif) + FIRST(AUXwhile) + FIRST(AUXexecute) + FIRST(AUXnewIDENT) } 
+//                                                  =  {“ifThen”+ “whileThen” + “execute” + “IDENT”}
+
+        auxInstrucciones();
+
+    }
+
+    public void auxInstrucciones() {//OJOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO, puse un follow de ;, {, FinishMain, pq si no creo que se ciclaria
+//<AUXinstrucciones>::= <AUXif> <AUXinstrucciones>
+//<AUXinstrucciones>::= <AUXwhile> <AUXinstrucciones>
+//<AUXinstrucciones>::= <AUXexecute> <AUXinstrucciones>
+//<AUXinstrucciones>::= < AUXnewIDENT> <AUXinstrucciones>
+//
+//FIRST(AUXinstrucciones)  =  { FIRST(AUXif) + FIRST(AUXwhile) + FIRST(AUXexecute) + FIRST(AUXnewIDENT)    } 
+//= {“ifThen”+ “whileThen” + “execute” + “IDENT”} 
+
+        String tokenActual = "";
+        tokenActual = tokensVarNum.get(contadorTOKENS);//ya estamos apuntando al primer token de <AUXif>, <AUXwhile> , <AUXexecute>, < AUXnewIDENT> 
+        if (!";".equals(tokenActual)
+                && !"}".equals(tokenActual) && !"FinishMain".equals(tokenActual)//&& !"endIf".equals(tokenActual)&& !"endWhile".equals(tokenActual)
+                ) {
+
+            if ("ifThen".equals(tokenActual)) {
+                auxIf();
+                auxInstrucciones();
+            } else if ("whileThen".equals(tokenActual)) {
+                auxWhile();                
+                auxInstrucciones();
+               
+            } else if ("execute".equals(tokenActual)) {
+                auxExecute();
+                auxInstrucciones();
+                
+            } else if ("IDENT".equals(tokenActual)) {
+                auxNewIDENT();
+                auxInstrucciones();
+            } else {
+                funcionError(1, "se esperaba una instruccionde tipo 'ifThen', 'whileThen', 'execute' o un 'IDENT' y envio--> " + tokenActual);
+            }
+        }
+
+    }
+
+    public void auxExecute() {
+
+// <AUXexecute> ::= execute <IDENT> ()
+//FIRST(AUXexecute) = { “execute” }
+
+        //Como aqui ya se supone que ya esta apuntando al token execute
+        String tokenActual = tokensVarNum.get(contadorTOKENS);
+        contadorTOKENS++; //apuntamos al token que sigue de execute
+
+        if ("execute".equals(tokenActual)) {
+
+            tokenActual = tokensVarNum.get(contadorTOKENS); //se supone que aqui recuperamos IDENT
+            contadorTOKENS++; //apuntamos al token que sigue de IDENT
+
+            if ("IDENT".equals(tokenActual)) {
+
+                tokenActual = tokensVarNum.get(contadorTOKENS); //se supone que aqui recuperamos (
+                contadorTOKENS++; //apuntamos al token que sigue de (
+
+                if ("(".equals(tokenActual)) {
+                    tokenActual = tokensVarNum.get(contadorTOKENS); //se supone que aqui recuperamos )
+                    contadorTOKENS++; //apuntamos al token que sigue de )
+                    if (")".equals(tokenActual)) {
+
+                    } else {
+                        funcionError(0, ")", tokenActual);
+                    }
+
+                } else {
+                    funcionError(0, "(", tokenActual);
+                }
+
+            } else {
+                funcionError(1, "se esperaba un IDENT y envio ", tokenActual);
+            }
+
+        } else {
+            funcionError(0, "execute", tokenActual);
+        }
+
+    }
+
+    public void auxNewIDENT() {
+//<AUXnewIDENT> ::= <IDENT> = <AUXins3>
+//FIRST(AUXnewIDENT) = {“IDENT”} 
+//
+//<AUXins3>:::= <AUXnumID> <AUXinsOtro>
+//FIRST(AUXins3) = FIRST(AUXnumID) = {“IDENT” + “NUMERO”}
+//<AUXinsOtro>::= <ARITMETICOS> <AUXnumID> <AUXinsOrto>
+//<AUXinsOtro>::= ε 
+//FIRST(AUXinsOtro) = {FIRST(ARITMETICOS) + ε }  = { “+” + ”-” +  “*” + “/”  + ε }
+//FOLLOW(AUXinsOtro) = { FOLLOW(AUXinsOtro) }={ }  
+
+        //Como aqui ya se supone que ya esta apuntando al token IDENT
+        String tokenActual = tokensVarNum.get(contadorTOKENS);
+        contadorTOKENS++; //apuntamos al token que sigue de IDENT
+
+        if ("IDENT".equals(tokenActual)) {
+
+            tokenActual = tokensVarNum.get(contadorTOKENS); //se supone que aqui recuperamos =
+            contadorTOKENS++; //apuntamos al token que sigue de =
+
+            if ("=".equals(tokenActual)) {
+                auxIns3();
+
+            } else {
+                funcionError(0, "=", tokenActual);
+            }
+
+        } else {
+            funcionError(1, "se esperaba un IDENT y envio ", tokenActual);
+        }
+
+    }
+    
+    public void auxIns3(){
+//<AUXins3>:::= <AUXnumID> <AUXinsOtro>
+//FIRST(AUXins3) = FIRST(AUXnumID) = {“IDENT” + “NUMERO”}
+//<AUXinsOtro>::= <ARITMETICOS> <AUXnumID> <AUXinsOrto>
+//<AUXinsOtro>::= ε 
+//FIRST(AUXinsOtro) = {FIRST(ARITMETICOS) + ε }  = { “+” + ”-” +  “*” + “/”  + ε }
+//FOLLOW(AUXinsOtro) = { FOLLOW(AUXinsOtro) }={ }  
+
+    auxNumID();
+    auxInsOtro();
+    
+    
+    }
+
+    public void auxInsOtro() {//OJOOO se agrego ; como follow
+
+//<AUXinsOtro>::= <ARITMETICOS> <AUXnumID> <AUXinsOtro>
+//<AUXinsOtro>::= ε 
+//FIRST(AUXinsOtro) = {FIRST(ARITMETICOS) + ε }  = { “+” + ”-” +  “*” + “/”  + ε }
+//FOLLOW(AUXinsOtro) = { FOLLOW(AUXinsOtro) }={   “ifThen”+ “whileThen” + “execute” + “IDENT”}  } 
+        
+    //Como aqui ya se supone que ya esta apuntando al primer tokeen <ARITMETICOS>
+        String tokenActual = tokensVarNum.get(contadorTOKENS);
+
+        if (!"ifThen".equals(tokenActual) && !"whileThen”".equals(tokenActual) && !"execute".equals(tokenActual) && !"IDENT".equals(tokenActual)  && !";".equals(tokenActual)) { //OJOOO se agrego ; como follow            
+            aritmeticos();
+            auxNumID();
+            auxInsOtro();
+        }
+
+    }
+    
+    
+    public void auxIf() {
+
+//<AUXif>::= ifThen  <CONDICION> ifExecute <AUXins1> <AUXifElse> endIf
+//<AUXins1>::= <INSTRUCCION> ; <AUXins1> 
+//<AUXins1>::= ε
+//FIRST(AUXins1) = { FIRST(INSTRUCCIÓN) + “ε “ }
+//FOLLOW(AUXins1) = {  FIRST(AUXifElse) + FOLLOW(AUXins1) + FOLLOW(AUXifElse) } = { “elseThen” +  “endIf“  } 
+//
+//<AUXifElse>::= ε
+//<AUXifElse>::= elseThen <AUXins1>
+//FIRST(AUXifElse) = { elseThen + “ε “ }
+//FIRST(AUXif) = { “ifThen” }
+//FOLLOW(AUXifElse) ={“endIF”}
+        //Como aqui ya se supone que ya esta apuntando al token ifThen
+        String tokenActual = tokensVarNum.get(contadorTOKENS);
+        contadorTOKENS++; //apuntamos al token que sigue de ifThen
+
+        if ("ifThen".equals(tokenActual)) {
+
+            condicion();
+
+            tokenActual = tokensVarNum.get(contadorTOKENS); //se supone que aqui recuperamos ifExecute
+            contadorTOKENS++; //apuntamos al token que sigue de ifExecute
+
+            if ("ifExecute".equals(tokenActual)) {
+                auxIns1();
+                auxIfElse();
+                tokenActual = tokensVarNum.get(contadorTOKENS); //se supone que aqui recuperamos endIF
+                contadorTOKENS++; //apuntamos al token que sigue de endIF
+
+                if ("endIf".equals(tokenActual)) {
+                    //System.out.println("----- Sali con Exito del endIf -----");
+                } else {
+                    funcionError(0, "endIf", tokenActual);
+                }
+
+            } else {
+                funcionError(0, "ifExecute", tokenActual);
+            }
+
+        } else {
+            funcionError(0, "ifThen", tokenActual);
+        }
 
     }
     
     
     
+    public void auxIfElse() {
+//<AUXifElse>::= ε
+//<AUXifElse>::= elseThen <AUXins1>
+//FIRST(AUXifElse) = { elseThen + “ε “ }
+//FIRST(AUXif) = { “ifThen” }
+//FOLLOW(AUXifElse) ={“endIF”}
+
+        //Como aqui ya se supone que ya esta apuntando al token elseThen o epsilon
+        String tokenActual = tokensVarNum.get(contadorTOKENS); //recuperamos
+
+        if (!"endIf".equals(tokenActual)) {
+
+            contadorTOKENS++; //apuntamos al token que sigue de elseThen
+
+            if ("elseThen".equals(tokenActual)) {
+                auxIns1();
+
+            } else {
+                funcionError(0, "elseThen", tokenActual);
+            }
+        }
+
+    }
+
+    public void auxIns1() {//ojo, se puso endWhile como follow
+//<AUXins1>::= <INSTRUCCION> ; <AUXins1> 
+//<AUXins1>::= ε
+//FIRST(AUXins1) = { FIRST(INSTRUCCIÓN) + “ε “ }
+//FOLLOW(AUXins1) = {  FIRST(AUXifElse) + FOLLOW(AUXins1) + FOLLOW(AUXifElse) } = { “elseThen” +  “endIf“  } //en este follow tengo duda
+
+        //Como aqui ya se supone que ya esta apuntando al primer  token de <INSTRUCCION> o al epsilon
+        String tokenActual = tokensVarNum.get(contadorTOKENS); //recuperamos
+        if (!"elseThen".equals(tokenActual) && !"endIf".equals(tokenActual) && !"endWhile".equals(tokenActual)) {
+
+            instruccion();
+
+            //Como aqui ya se supone que ya esta apuntando al token ;
+            tokenActual = tokensVarNum.get(contadorTOKENS); //recuperamos
+            contadorTOKENS++; //apuntamos al token que sigue de ;
+
+            if (";".equals(tokenActual)) {
+                auxIns1();
+
+            } else {
+                funcionError(0, "; -- en auxIns1", tokenActual);
+            }
+        }// si no entra al if, se quedaria apuntando a elseThen o endIf
+    }
+
+    public void auxWhile() {
+//<AUXwhile>::= whileThen  <CONDICION> whileExecute <AUXins2>  endWhile
+//<AUXins2>::= <INSTRUCCION> ; <AUXins2> 
+//<AUXins2>::= ε
+//FIRST(AUXins2) = { FIRST(INSTRUCCIÓN) + “ε “ }
+//FIRST(AUXwhile) = { “whileThen” }
+//FOLLOW(AUXins2) = { “endWhile” + FOLLOW(AUXins2)  } 
+
+        //Como aqui ya se supone que ya esta apuntando al token whileThen
+        String tokenActual = tokensVarNum.get(contadorTOKENS); //recuperamos
+        contadorTOKENS++; //apuntamos al token que sigue de whileThen
+
+        if ("whileThen".equals(tokenActual)) {
+            condicion();
+
+            //Como aqui ya se supone que ya esta apuntando al token whileExecute
+            tokenActual = tokensVarNum.get(contadorTOKENS); //recuperamos
+            contadorTOKENS++; //apuntamos al token que sigue de whileExecute
+
+            if ("whileExecute".equals(tokenActual)) {
+                auxIns2();
+
+                //Como aqui ya se supone que ya esta apuntando al token endWhile
+                tokenActual = tokensVarNum.get(contadorTOKENS); //recuperamos
+                contadorTOKENS++; //apuntamos al token que sigue de endWhile
+                if ("endWhile".equals(tokenActual)) {
+                    //System.out.println("---- SALI DEL ENDWHILE -----");
+                } else {
+                    funcionError(0, "endWhile", tokenActual);
+                }
+
+            } else {
+                funcionError(0, "whileExecute", tokenActual);
+            }
+
+        } else {
+            funcionError(0, "whileThen", tokenActual);
+        }
+
+    }
+
+    public void auxIns2() {
+//<AUXins2>::= <INSTRUCCION> ; <AUXins2> 
+//<AUXins2>::= ε
+//FIRST(AUXins2) = { FIRST(INSTRUCCIÓN) + “ε “ }
+//FIRST(AUXwhile) = { “whileThen” }
+//FOLLOW(AUXins2) = { “endWhile” + FOLLOW(AUXins2)  } 
+
+        //Como aqui ya se supone que ya esta apuntando al primer token <Instruccion> o epsilon
+        String tokenActual = tokensVarNum.get(contadorTOKENS); //recuperamos
+
+        if (!"endWhile".equals(tokenActual)) {
+
+            instruccion();
+
+            //Como aqui ya se supone que ya esta apuntando al token ;
+            tokenActual = tokensVarNum.get(contadorTOKENS); //recuperamos
+
+            contadorTOKENS++; //apuntamos al token que sigue de ;
+
+            if (";".equals(tokenActual)) {
+                auxIns2();
+
+            } else {
+                funcionError(0, ";", tokenActual);
+            }
+        }
+
+    }
+
+    
+
+    
+    public void condicion(){
+//    <CONDICION>::= <AUXcon1>
+//FIRST(CONDICION) = { FIRST(AUXcon1) } = { “(“ }
+//<AUXcon1>::= ( <AUXnumID>  <RELACIONALES> <AUXnumID>  ) <AUXcond2>
+//FIRST(AUXcon1) = {  “(“  }
+//<AUXcon2>::= <BOOLEANOS> <AUXcon1>
+//<AUXcon2>::= ε
+//FIRST(AUXcon2) = { FIRST(BOOLEANOS) + “ε” } 
+//FOLLOW(AUXcon2) = {FOLLOW(AUXcon1)} //ESTA NO SE SI SE DEJARIA ASI PQ AUXcon1 creo no tiene folllows
+    auxCondicion1();
+
+
+    
+    }
+
+    public void auxCondicion1() {
+//<AUXcon1>::= ( <AUXnumID>  <RELACIONALES> <AUXnumID>  ) <AUXcond2>
+//FIRST(AUXcon1) = {  “(“  }
+//<AUXcon2>::= <BOOLEANOS> <AUXcon1>
+//<AUXcon2>::= ε
+//FIRST(AUXcon2) = { FIRST(BOOLEANOS) + “ε” } 
+//FOLLOW(AUXcon2) = {FOLLOW(AUXcon1)} //ESTA NO SE SI SE DEJARIA ASI PQ AUXcon1 creo no tiene folllows
+
+        //Como aqui ya se supone que ya esta apuntando al token (
+        String tokenActual = tokensVarNum.get(contadorTOKENS);
+        contadorTOKENS++; //apuntamos al token que sigue
+        if ("(".equals(tokenActual)) {
+            auxNumID();
+            relacionales();//falta programar
+            auxNumID();
+
+            tokenActual = tokensVarNum.get(contadorTOKENS); //aqui se supone que apuntamos al )
+            contadorTOKENS++; //apuntamos al token que sigue
+
+            if (")".equals(tokenActual)) {
+                auxCondicion2();
+
+            } else {
+                funcionError(0, ")", tokenActual);
+            }
+
+        } else {
+            funcionError(0, "(", tokenActual);
+        }
+
+    }
+
+    private void auxCondicion2() {
+//<AUXcon2>::= <BOOLEANOS> <AUXcon1>
+//<AUXcon2>::= ε
+//FIRST(AUXcon2) = { FIRST(BOOLEANOS) + “ε” } 
+//FOLLOW(AUXcon2) = {FOLLOW(AUXcon1)} //ESTA NO SE SI SE DEJARIA ASI PQ AUXcon1 creo no tiene folllows
+        
+        String tokenActual = tokensVarNum.get(contadorTOKENS); //aqui se supone que apuntamos al booleano o epsilon
+        if (!"ifExecute".equals(tokenActual) && !"whileExecute".equals(tokenActual)) {
+            booleanos();
+            auxCondicion1();
+        }
+
+    }
+
+    public void aritmeticos() {
+//        <ARITMETICOS>::= +
+//<ARITMETICOS>::= -
+//<ARITMETICOS>::= *
+//<ARITMETICOS>::= /
+
+        //Como aqui ya se esta apuntando al token, se rescata el token aritmetico
+        String tokenActual = tokensVarNum.get(contadorTOKENS);
+        contadorTOKENS++; //apuntamos al token que sigue 
+        if ("+".equals(tokenActual) || "-".equals(tokenActual) || "*".equals(tokenActual) || "/".equals(tokenActual)) {
+
+        } else {
+            funcionError(1, "Este no es un simbolo aritmetico valido--> ", tokenActual);
+        }
+
+    }
+
+    public void relacionales() {
+//        <RELACIONALES>::= ==
+//<RELACIONALES>::= /=
+//<RELACIONALES>::= <=
+//<RELACIONALES>::= >=
+//<RELACIONALES>::= <
+//<RELACIONALES>::= >
+//FIRST(RELACIONALES) = {“==” + “/=” + “<=” + “>=” + “>” + “<” } 
+
+        //Como aqui ya se esta apuntando al token, se rescata el token relacional
+        String tokenActual = tokensVarNum.get(contadorTOKENS);
+        contadorTOKENS++; //apuntamos al token que sigue 
+        if ("==".equals(tokenActual) || "/=".equals(tokenActual) || "<=".equals(tokenActual) || ">=".equals(tokenActual) || "<".equals(tokenActual) || ">".equals(tokenActual)) {
+
+        } else {
+            funcionError(1, "Este no es relacional--> ", tokenActual);
+        }
+
+    }
+
+    public void booleanos() {
+
+//     <BOOLEANOS>::= or
+//<BOOLEANOS>::= and
+//<BOOLEANOS>::= OR
+//<BOOLEANOS>::= AND
+//FIRST(BOOLEANOS) = { “or”+”and”+ “OR”+“AND” }
+        //Como aqui ya se esta apuntando al token, se rescata el token booleano
+        String tokenActual = tokensVarNum.get(contadorTOKENS);
+        contadorTOKENS++; //apuntamos al token que sigue 
+        if ("or".equals(tokenActual) || "OR".equals(tokenActual) || "and".equals(tokenActual) || "AND".equals(tokenActual)) {
+
+        } else {
+            funcionError(1, "Este no es un condicional booleano--> ", tokenActual);
+        }
+
+    }
+
     //AUN NO SE SI ES NECESARIO EL CASE, o si con 3 parametros abarcamos todos los errores de sitaxis
     // en el metodo sobrecargado
-    
     public void funcionError(int errorN, String esperado) {
 
         switch (errorN) {
@@ -564,8 +1072,7 @@ public class LeerArchivo {
         }
 
     }
-    
-    
+
     public void funcionError(int errorN, String esperado, String recibido) {
 
         switch (errorN) {
@@ -583,19 +1090,6 @@ public class LeerArchivo {
         }
 
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
 
     public String getDireccion() {
         return direccion;
@@ -620,16 +1114,9 @@ public class LeerArchivo {
         guardarTOKENS(archivo1);
         varNum();
         archivo1.programa();
-        
 
     }
-    
-    
-    
-    
-    
-    
-    
+
     
 
 }
