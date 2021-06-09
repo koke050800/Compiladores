@@ -24,6 +24,8 @@ public class LeerArchivo {
     public static ArrayList<String> simbolosValidos = new  ArrayList<>();
     public static ArrayList<String> tokens = new  ArrayList<>();
     public static ArrayList<String> tokensVarNum = new  ArrayList<>();
+    int mensajeMainMostrado = 0;
+    int errorSemantico= 0;
     
     public LeerArchivo() {
         simbolosValidos.add("#");
@@ -44,7 +46,7 @@ public class LeerArchivo {
         simbolosValidos.add("decimal");
         simbolosValidos.add("double");
         simbolosValidos.add("caracter");
-        simbolosValidos.add("String");
+        simbolosValidos.add("string");
         simbolosValidos.add("=");
         simbolosValidos.add("==");
         simbolosValidos.add("/=");
@@ -970,7 +972,7 @@ public class LeerArchivo {
 //<AUXcon2>::= ε
 //FIRST(AUXcon2) = { FIRST(BOOLEANOS) + “ε” } 
 //FOLLOW(AUXcon2) = {FOLLOW(AUXcon1)} //ESTA NO SE SI SE DEJARIA ASI PQ AUXcon1 creo no tiene folllows
-        
+
         String tokenActual = tokensVarNum.get(contadorTOKENS); //aqui se supone que apuntamos al booleano o epsilon
         if (!"ifExecute".equals(tokenActual) && !"whileExecute".equals(tokenActual)) {
             booleanos();
@@ -1091,6 +1093,195 @@ public class LeerArchivo {
 
     }
 
+    public void analizadorSemantico() {
+
+        ArrayList<IdentificadorVariable> identsVariablesMain = new ArrayList<>();
+        ArrayList<IdentificadorVariable> identsVariablesLocal = new ArrayList<>();
+        System.out.println("\n****** Iniciando revision de declaraciones repettidas con bloque MAIN ******");
+        separarVariablesLocales(identsVariablesMain, identsVariablesLocal);
+
+        if (errorSemantico == 0) {
+            System.out.println("---------- PROGRAMA SIN ERRORES SEMANTICOS ----------");
+        } else {
+            System.out.println("---------- SE ENCONTRARON ERRORES SEMANTICOS ----------");
+        }
+
+    }
+
+    private void separarVariablesLocales(ArrayList<IdentificadorVariable> identsVariablesMain, ArrayList<IdentificadorVariable> identsVariablesLocal) {
+
+        for (String aux : tokens) {
+
+            System.out.println(aux);
+        }
+        boolean isUnProcess = false;
+        for (int i = 0; i < tokens.size(); i++) {
+            String tokensito = tokens.get(i);
+
+            if (tokensito.equals("process")) {
+                
+                
+                //se supone que las variables del Main ya estan declaradas
+                if (identsVariablesMain.size() > 0) {
+                    ArrayList<IdentificadorVariable> identsVariablesAUXMain = (ArrayList<IdentificadorVariable>) identsVariablesMain.clone();
+                    revisarDeclaracionesRepetidasBloque(identsVariablesAUXMain,1);//revisamos que en el Main no se repitan las variables
+                }
+
+                String nombreProcess;
+                nombreProcess = tokens.get(i + 1);
+                System.out.println("\n****** Revision de declaraciones repettidas process " + nombreProcess + "******");
+                isUnProcess = true;
+                //cada proces ponemos la lista nueva
+                identsVariablesLocal.removeAll(identsVariablesLocal);
+                identsVariablesLocal.clear();
+            }
+
+            if (isUnProcess && tokensito.equals("}")) {
+                isUnProcess = false;
+                if (identsVariablesLocal.size() > 0) {
+
+//                    for (IdentificadorVariable aux : identsVariablesLocal) {
+//                        System.out.println(aux.getNombreIdentVar() + " \\ " + aux.getTipoDato() + " \\ " + aux.isDeclarado() + " \\ " + aux.isIsLocal());
+//                    }
+
+                    revisarDeclaracionesRepetidasBloque(identsVariablesLocal,0);
+                    revisarDeclaracionesRepetidasMainBloque(identsVariablesLocal, identsVariablesMain);
+                }
+            }
+
+            if (!isUnProcess && (tokensito.equals("#") || tokensito.equals("integer") || tokensito.equals("decimal") || tokensito.equals("double") || tokensito.equals("caracter") || tokensito.equals("string"))) {
+                String nombreVarIdent = tokens.get(i + 1);
+                int tipo = 10;
+                switch (tokensito) {
+                    case "#":
+                        tipo = IdentificadorVariable.tipoConstante;
+                        break;
+
+                    case "integer":
+                        tipo = IdentificadorVariable.tipoInteger;
+                        break;
+
+                    case "decimal":
+                        tipo = IdentificadorVariable.tipoDecimal;
+                        break;
+
+                    case "double":
+                        tipo = IdentificadorVariable.tipoDouble;
+                        break;
+
+                    case "caracter":
+                        tipo = IdentificadorVariable.tipoCaracter;
+                        break;
+
+                    case "string":
+                        tipo = IdentificadorVariable.tipoString;
+                        break;
+
+                }
+                IdentificadorVariable nuevoIdentVar = new IdentificadorVariable(nombreVarIdent, tipo, false);
+                identsVariablesMain.add(nuevoIdentVar);
+                
+            } else if (isUnProcess && (tokensito.equals("#") || tokensito.equals("integer") || tokensito.equals("decimal") || tokensito.equals("double") || tokensito.equals("caracter") || tokensito.equals("string"))) {
+                String nombreVarIdent = tokens.get(i + 1);
+                int tipo = 10;
+                switch (tokensito) {
+                    case "#":
+                        tipo = IdentificadorVariable.tipoConstante;
+                        break;
+
+                    case "integer":
+                        tipo = IdentificadorVariable.tipoInteger;
+                        break;
+
+                    case "decimal":
+                        tipo = IdentificadorVariable.tipoDecimal;
+                        break;
+
+                    case "double":
+                        tipo = IdentificadorVariable.tipoDouble;
+                        break;
+
+                    case "caracter":
+                        tipo = IdentificadorVariable.tipoCaracter;
+                        break;
+
+                    case "string":
+                        tipo = IdentificadorVariable.tipoString;
+                        break;
+
+                }
+
+                IdentificadorVariable nuevoIdentVar = new IdentificadorVariable(nombreVarIdent, tipo, true);
+                identsVariablesLocal.add(nuevoIdentVar);
+            }
+        }
+
+    }
+
+    public void revisarDeclaracionesRepetidasMainBloque(ArrayList<IdentificadorVariable> bloqueLocal, ArrayList<IdentificadorVariable> bloqueMain) {
+//        System.out.println("\nLocales");
+//        for (IdentificadorVariable aux : bloqueLocal) {
+//
+//            System.out.println(aux.getNombreIdentVar());
+//        }
+//        System.out.println("\nMain");
+//        for (IdentificadorVariable aux : bloqueMain) {
+//
+//            System.out.println(aux.getNombreIdentVar());
+//        }
+
+        for (int i = 0; i < bloqueLocal.size(); i++) {
+            String evaluando = bloqueLocal.get(i).getNombreIdentVar();
+
+            for (int j = 0; j < bloqueMain.size(); j++) {
+
+                if (evaluando.equals(bloqueMain.get(j).getNombreIdentVar())) {
+                    System.out.println("ERROR: Usted tiene la variable \"" + evaluando + "\" ya declarada en el bloque Main");
+                    System.out.println("Recuerde que solo puede declarar la variable o constante una vez en el bloque");
+                    errorSemantico++;
+                }
+
+            }
+
+        }
+
+    }
+
+    public void revisarDeclaracionesRepetidasBloque(ArrayList<IdentificadorVariable> identsVariablesRecibido, int mainSelected) {
+        ArrayList<IdentificadorVariable> identsVariables = (ArrayList<IdentificadorVariable>) identsVariablesRecibido.clone();
+        int contador = 0;
+
+        for (int i = 0; i < identsVariables.size(); i++) {
+            String evaluando = identsVariables.get(i).getNombreIdentVar();
+
+            for (int j = 0; j < identsVariables.size(); j++) {
+                IdentificadorVariable aux = identsVariables.get(j);
+                if (evaluando.equals(aux.getNombreIdentVar())) {
+                    contador++;
+                    if (contador > 1) {
+                        identsVariables.remove(j);
+                    }
+                }
+            }
+
+            if (contador > 1 && mainSelected == 0) {
+                System.out.println("ERROR: Usted tiene la variable \"" + evaluando + "\" declarada " + contador + " veces");
+                System.out.println("Recuerde que solo puede declarar la variable o constante una vez en el bloque");
+                errorSemantico++;
+
+            } else if (contador > 1 && mainSelected == 1) {
+                if (mensajeMainMostrado < 1) {
+                    System.out.println("\nERROR: Usted tiene la variable \"" + evaluando + "\" declarada " + contador + " veces");
+                    System.out.println("Recuerde que solo puede declarar la variable o constante una vez en el bloque MAIN");
+                    errorSemantico++;
+                }
+                mensajeMainMostrado++;
+            }
+            contador = 0;//para que la siguiente palabra el contador este en 0
+        }
+
+    }
+
     public String getDireccion() {
         return direccion;
     }
@@ -1114,9 +1305,8 @@ public class LeerArchivo {
         guardarTOKENS(archivo1);
         varNum();
         archivo1.programa();
+        archivo1.analizadorSemantico();
 
     }
-
-    
 
 }
