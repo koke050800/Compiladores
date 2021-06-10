@@ -22,7 +22,8 @@ public class IdentificadorVariable {
     public static int tipoInteger = 2;
     public static int tipoDecimal = 3;
     public static int tipoDouble = 4;
-    public static int tipoConstante = 5;
+    public static int tipoConstanteSinPunto = 5;
+    public static int tipoConstantePunto = 6;
 
     public IdentificadorVariable(String nombreIdentVar, int tipoDato, boolean isLocal) {
         this.declarado = true;
@@ -103,12 +104,12 @@ public class IdentificadorVariable {
         this.isLocal = isLocal;
     }
 
-    public static int getTipoConstante() {
-        return tipoConstante;
+    public static int getTipoConstanteSinPunto() {
+        return tipoConstanteSinPunto;
     }
 
-    public static void setTipoConstante(int tipoConstante) {
-        IdentificadorVariable.tipoConstante = tipoConstante;
+    public static void setTipoConstanteSinPunto(int tipoConstanteSinPunto) {
+        IdentificadorVariable.tipoConstanteSinPunto = tipoConstanteSinPunto;
     }
     
     
